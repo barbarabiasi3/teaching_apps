@@ -117,9 +117,14 @@
     const xMax = Math.max(60, Math.ceil(eq.q * 1.8 / 10) * 10);
     const yMax = Math.max(100, Math.ceil(Math.max(a, c + d * xMax) / 25) * 25);
     const f = frame(760, 420, xMax, yMax);
+    const demandEnd = Math.min(xMax, a / b);
+    const csPoints = linePath([[0, a], [0, eq.p], [eq.q, eq.p]], f);
+    const psPoints = linePath([[0, c], [0, eq.p], [eq.q, eq.p]], f);
     return chart(760, 420, html`
       ${f.axis}
-      <line class="demand-line" x1="${f.x(0)}" y1="${f.y(a)}" x2="${f.x(xMax)}" y2="${f.y(linearDemand(a, b, xMax))}"></line>
+      <polygon class="area-cs" points="${csPoints}"></polygon>
+      <polygon class="area-ps" points="${psPoints}"></polygon>
+      <line class="demand-line" x1="${f.x(0)}" y1="${f.y(a)}" x2="${f.x(demandEnd)}" y2="${f.y(Math.max(0, linearDemand(a, b, demandEnd)))}"></line>
       <line class="supply-line" x1="${f.x(0)}" y1="${f.y(c)}" x2="${f.x(xMax)}" y2="${f.y(linearSupply(c, d, xMax))}"></line>
       <line class="guide-line" x1="${f.x(eq.q)}" y1="${f.y(eq.p)}" x2="${f.x(eq.q)}" y2="${f.margin.t + f.h}"></line>
       <line class="guide-line" x1="${f.margin.l}" y1="${f.y(eq.p)}" x2="${f.x(eq.q)}" y2="${f.y(eq.p)}"></line>
@@ -133,13 +138,16 @@
   function demandOnlyChart(a, b, price, extras = "") {
     const q = Math.max(0, (a - price) / b);
     const xMax = Math.max(40, Math.ceil((a / b) / 10) * 10);
-    const yMax = Math.max(100, Math.ceil(a / 25) * 25);
+    const yMax = Math.max(100, Math.ceil(Math.max(a, price) / 25) * 25);
     const f = frame(720, 380, xMax, yMax);
     const csPoints = linePath([[0, a], [0, price], [q, price]], f);
+    const revenuePoints = linePath([[0, 0], [q, 0], [q, price], [0, price]], f);
+    const demandEnd = Math.min(xMax, a / b);
     return chart(720, 380, html`
       ${f.axis}
+      <polygon class="area-revenue" points="${revenuePoints}"></polygon>
       <polygon class="area-cs" points="${csPoints}"></polygon>
-      <line class="demand-line" x1="${f.x(0)}" y1="${f.y(a)}" x2="${f.x(xMax)}" y2="${f.y(linearDemand(a, b, xMax))}"></line>
+      <line class="demand-line" x1="${f.x(0)}" y1="${f.y(a)}" x2="${f.x(demandEnd)}" y2="${f.y(Math.max(0, linearDemand(a, b, demandEnd)))}"></line>
       <line class="guide-line" x1="${f.margin.l}" y1="${f.y(price)}" x2="${f.x(q)}" y2="${f.y(price)}"></line>
       <line class="guide-line" x1="${f.x(q)}" y1="${f.y(price)}" x2="${f.x(q)}" y2="${f.margin.t + f.h}"></line>
       <circle class="eq-point" cx="${f.x(q)}" cy="${f.y(price)}" r="5"></circle>
@@ -243,12 +251,20 @@
         const buyers = values.filter((v) => v >= adjustedPrice);
         const cs = buyers.reduce((sum, v) => sum + v - adjustedPrice, 0) * scale;
         const max = Math.max(...values);
+        const lineY = 270 - 220 * adjustedPrice / max;
         const bars = values.map((v, i) => {
           const h = 220 * v / max;
           const x = 62 + i * 47;
-          return `<rect class="${v >= adjustedPrice ? "bar-buy" : "bar-out"}" x="${x}" y="${270 - h}" width="28" height="${h}"></rect>`;
+          if (v < adjustedPrice) return `<rect class="bar-out" x="${x}" y="${270 - h}" width="28" height="${h}"></rect>`;
+          const top = 270 - h;
+          const surplusHeight = Math.max(0, lineY - top);
+          const revenueHeight = Math.max(0, 270 - lineY);
+          return html`
+            <rect class="area-revenue" x="${x}" y="${lineY}" width="28" height="${revenueHeight}"></rect>
+            <rect class="area-cs" x="${x}" y="${top}" width="28" height="${surplusHeight}"></rect>
+            <rect class="bar-outline" x="${x}" y="${top}" width="28" height="${h}"></rect>
+          `;
         }).join("");
-        const lineY = 270 - 220 * adjustedPrice / max;
         return {
           visualTitle: "Sorted Willingness to Pay",
           visualNote: "Each bar is one potential buyer. Bars above the price line buy.",
@@ -420,12 +436,17 @@
         const privateEq = solveLinearMarket(s.a, b, s.c, d);
         const socialEq = solveLinearMarket(s.a, b, s.c + s.mec, d);
         const policyEq = solveLinearMarket(s.a, b, s.c + s.tax, d);
+        const overproduction = Math.max(0, privateEq.q - socialEq.q);
+        const dwl = 0.5 * s.mec * overproduction;
         const xMax = Math.max(70, Math.ceil(Math.max(privateEq.q, socialEq.q, policyEq.q) * 1.8 / 10) * 10);
         const yMax = Math.max(140, Math.ceil(Math.max(s.a, s.c + Math.max(s.mec, s.tax) + d * xMax) / 25) * 25);
         const f = frame(760, 420, xMax, yMax);
+        const demandEnd = Math.min(xMax, s.a / b);
+        const dwlShape = dwl > 0 ? `<polygon class="area-dwl" points="${linePath([[socialEq.q, socialEq.p], [privateEq.q, privateEq.p], [privateEq.q, privateEq.p + s.mec]], f)}"></polygon>` : "";
         const visual = chart(760, 420, html`
           ${f.axis}
-          <line class="demand-line" x1="${f.x(0)}" y1="${f.y(s.a)}" x2="${f.x(xMax)}" y2="${f.y(linearDemand(s.a, b, xMax))}"></line>
+          ${dwlShape}
+          <line class="demand-line" x1="${f.x(0)}" y1="${f.y(s.a)}" x2="${f.x(demandEnd)}" y2="${f.y(Math.max(0, linearDemand(s.a, b, demandEnd)))}"></line>
           <line class="supply-line" x1="${f.x(0)}" y1="${f.y(s.c)}" x2="${f.x(xMax)}" y2="${f.y(linearSupply(s.c, d, xMax))}"></line>
           <line class="tax-adjusted-line" x1="${f.x(0)}" y1="${f.y(s.c + s.mec)}" x2="${f.x(xMax)}" y2="${f.y(s.c + s.mec + d * xMax)}"></line>
           <line class="policy-line" x1="${f.x(0)}" y1="${f.y(s.c + s.tax)}" x2="${f.x(xMax)}" y2="${f.y(s.c + s.tax + d * xMax)}"></line>
@@ -437,7 +458,7 @@
           <text class="curve-label" x="${f.x(xMax * 0.52)}" y="${f.y(s.c + s.mec + d * xMax * 0.52) - 8}">Social MC</text>
           <text class="curve-label" x="${f.x(xMax * 0.18)}" y="${f.y(s.c + s.tax + d * xMax * 0.18) - 8}">Policy tax</text>
         `);
-        return { visualTitle: "Private vs Social Cost", visualNote: "The Pigouvian tax tries to move private choices to the social-cost curve.", visual, stats: [makeStat(fmt.number(privateEq.q), "Private quantity"), makeStat(fmt.number(socialEq.q), "Social optimum"), makeStat(fmt.number(policyEq.q), "Quantity with policy"), makeStat(fmt.money(Math.abs(s.tax - s.mec)), "Tax gap from Pigouvian rate")], intuition: "When production creates external costs, the private market trades too much. A tax equal to the marginal external cost aligns private and social incentives.", quiz: commonQuiz("Compare private marginal cost with social marginal cost", "Only compare consumer surplus with revenue", "Externalities are about costs or benefits outside the buyer-seller transaction.") };
+        return { visualTitle: "Private vs Social Cost", visualNote: "The Pigouvian tax tries to move private choices to the social-cost curve.", visual, stats: [makeStat(fmt.number(privateEq.q), "Private quantity"), makeStat(fmt.number(socialEq.q), "Social optimum"), makeStat(fmt.number(policyEq.q), "Quantity with policy"), makeStat(fmt.wholeMoney(dwl), "Overproduction DWL"), makeStat(fmt.money(Math.abs(s.tax - s.mec)), "Tax gap from Pigouvian rate")], intuition: "When production creates external costs, the private market trades too much. A tax equal to the marginal external cost aligns private and social incentives.", quiz: commonQuiz("Compare private marginal cost with social marginal cost", "Only compare consumer surplus with revenue", "Externalities are about costs or benefits outside the buyer-seller transaction.") };
       }
     };
   }
@@ -474,9 +495,38 @@
         const p = s.world + s.tariff;
         const qd = Math.max(0, (s.a - p) / b);
         const qs = Math.max(0, (p - s.c) / d);
+        const qdWorld = Math.max(0, (s.a - s.world) / b);
+        const qsWorld = Math.max(0, (s.world - s.c) / d);
         const imports = Math.max(0, qd - qs);
         const revenue = imports * s.tariff;
-        return { visualTitle: "Import Market with Tariff", visualNote: "The tariff lifts the domestic price above the world price.", visual: linearSupplyDemandChart(s.a, b, s.c, d), stats: [makeStat(fmt.money(p), "Domestic price"), makeStat(fmt.number(qd), "Domestic demand"), makeStat(fmt.number(qs), "Domestic supply"), makeStat(fmt.number(imports), "Imports"), makeStat(fmt.wholeMoney(revenue), "Tariff revenue")], intuition: "Consumers lose from the higher price; domestic producers gain; government collects revenue; some surplus is destroyed.", quiz: commonQuiz("Consumers, producers, government, and deadweight loss", "Only domestic producers", "Tariff analysis tracks winners, losers, revenue, and destroyed gains from trade.") };
+        const xMax = Math.max(60, Math.ceil(Math.max(qdWorld, qd, qs) * 1.15 / 10) * 10);
+        const yMax = Math.max(120, Math.ceil(Math.max(s.a, p, s.c + d * xMax) / 25) * 25);
+        const f = frame(760, 420, xMax, yMax);
+        const demandEnd = Math.min(xMax, s.a / b);
+        const csPoints = linePath([[0, s.a], [0, p], [qd, p]], f);
+        const psPoints = linePath([[0, s.c], [0, p], [qs, p]], f);
+        const revenueShape = imports > 0 ? `<polygon class="area-revenue" points="${linePath([[qs, s.world], [qd, s.world], [qd, p], [qs, p]], f)}"></polygon>` : "";
+        const prodDwlShape = imports > 0 && qs > qsWorld ? `<polygon class="area-dwl" points="${linePath([[qsWorld, s.world], [qsWorld, p], [qs, p]], f)}"></polygon>` : "";
+        const consDwlShape = imports > 0 && qdWorld > qd ? `<polygon class="area-dwl" points="${linePath([[qd, p], [qdWorld, p], [qdWorld, s.world]], f)}"></polygon>` : "";
+        const visual = chart(760, 420, html`
+          ${f.axis}
+          <polygon class="area-cs" points="${csPoints}"></polygon>
+          <polygon class="area-ps" points="${psPoints}"></polygon>
+          ${revenueShape}
+          ${prodDwlShape}
+          ${consDwlShape}
+          <line class="demand-line" x1="${f.x(0)}" y1="${f.y(s.a)}" x2="${f.x(demandEnd)}" y2="${f.y(Math.max(0, linearDemand(s.a, b, demandEnd)))}"></line>
+          <line class="supply-line" x1="${f.x(0)}" y1="${f.y(s.c)}" x2="${f.x(xMax)}" y2="${f.y(linearSupply(s.c, d, xMax))}"></line>
+          <line class="guide-line" x1="${f.margin.l}" y1="${f.y(s.world)}" x2="${f.x(qdWorld)}" y2="${f.y(s.world)}"></line>
+          <line class="tax-adjusted-line" x1="${f.margin.l}" y1="${f.y(p)}" x2="${f.x(qd)}" y2="${f.y(p)}"></line>
+          <line class="guide-line" x1="${f.x(qs)}" y1="${f.y(p)}" x2="${f.x(qs)}" y2="${f.margin.t + f.h}"></line>
+          <line class="guide-line" x1="${f.x(qd)}" y1="${f.y(p)}" x2="${f.x(qd)}" y2="${f.margin.t + f.h}"></line>
+          <text class="curve-label" x="${f.x(xMax * 0.82)}" y="${f.y(linearDemand(s.a, b, xMax * 0.82)) + 18}">Demand</text>
+          <text class="curve-label" x="${f.x(xMax * 0.78)}" y="${f.y(linearSupply(s.c, d, xMax * 0.78)) - 8}">Supply</text>
+          <text class="point-label" x="${f.margin.l + 10}" y="${f.y(p) - 8}">Price with tariff</text>
+          <text class="point-label" x="${f.margin.l + 10}" y="${f.y(s.world) + 18}">World price</text>
+        `);
+        return { visualTitle: "Import Market with Tariff", visualNote: "The tariff lifts the domestic price above the world price and creates revenue plus deadweight loss.", visual, stats: [makeStat(fmt.money(p), "Domestic price"), makeStat(fmt.number(qd), "Domestic demand"), makeStat(fmt.number(qs), "Domestic supply"), makeStat(fmt.number(imports), "Imports"), makeStat(fmt.wholeMoney(revenue), "Tariff revenue")], intuition: "Consumers lose from the higher price; domestic producers gain; government collects revenue; some surplus is destroyed.", quiz: commonQuiz("Consumers, producers, government, and deadweight loss", "Only domestic producers", "Tariff analysis tracks winners, losers, revenue, and destroyed gains from trade.") };
       }
     };
   }
@@ -491,7 +541,32 @@
         const vc = s.base * q + s.curvature * q * q;
         const profit = s.price * q - vc - s.fixed;
         const shutdown = s.price < s.base;
-        const body = chart(720, 360, html`<line class="axis" x1="55" y1="300" x2="660" y2="300"></line><line class="axis" x1="55" y1="35" x2="55" y2="300"></line><path class="supply-line no-fill" d="M55 285 C200 260 360 180 640 60"></path><line class="tax-adjusted-line" x1="55" y1="${300 - s.price * 2}" x2="660" y2="${300 - s.price * 2}"></line><text class="curve-label" x="530" y="72">MC</text>`);
+        const atcAtQ = q > 0 ? (vc + s.fixed) / q : s.base + s.fixed;
+        const xMax = Math.max(40, Math.ceil(Math.max(q * 1.8, 20) / 10) * 10);
+        const mc = (x) => s.base + 2 * s.curvature * x;
+        const atc = (x) => s.base + s.curvature * x + s.fixed / Math.max(1, x);
+        const yMax = Math.max(100, Math.ceil(Math.max(s.price, atcAtQ, mc(xMax), atc(Math.max(5, xMax * 0.18))) / 25) * 25);
+        const f = frame(720, 380, xMax, yMax);
+        const mcPath = Array.from({ length: 32 }, (_, i) => {
+          const x = xMax * i / 31;
+          return `${i === 0 ? "M" : "L"}${f.x(x).toFixed(2)} ${f.y(mc(x)).toFixed(2)}`;
+        }).join(" ");
+        const atcPath = Array.from({ length: 32 }, (_, i) => {
+          const x = Math.max(1, xMax * i / 31);
+          return `${i === 0 ? "M" : "L"}${f.x(x).toFixed(2)} ${f.y(atc(x)).toFixed(2)}`;
+        }).join(" ");
+        const profitRect = q > 0 ? `<polygon class="${profit >= 0 ? "area-profit" : "area-loss"}" points="${linePath([[0, Math.min(s.price, atcAtQ)], [q, Math.min(s.price, atcAtQ)], [q, Math.max(s.price, atcAtQ)], [0, Math.max(s.price, atcAtQ)]], f)}"></polygon>` : "";
+        const body = chart(720, 380, html`
+          ${f.axis}
+          ${profitRect}
+          <path class="supply-line no-fill" d="${mcPath}"></path>
+          <path class="demand-line no-fill" d="${atcPath}"></path>
+          <line class="tax-adjusted-line" x1="${f.margin.l}" y1="${f.y(s.price)}" x2="${f.margin.l + f.w}" y2="${f.y(s.price)}"></line>
+          <line class="guide-line" x1="${f.x(q)}" y1="${f.y(s.price)}" x2="${f.x(q)}" y2="${f.margin.t + f.h}"></line>
+          <circle class="eq-point" cx="${f.x(q)}" cy="${f.y(s.price)}" r="5"></circle>
+          <text class="curve-label" x="${f.x(xMax * 0.72)}" y="${f.y(mc(xMax * 0.72)) - 8}">MC</text>
+          <text class="curve-label" x="${f.x(xMax * 0.36)}" y="${f.y(atc(xMax * 0.36)) - 8}">ATC</text>
+        `);
         return { visualTitle: "Marginal Cost and Price", visualNote: "Produce until price equals marginal cost, unless price is below avoidable cost.", visual: body, stats: [makeStat(fmt.number(q), "Output"), makeStat(fmt.wholeMoney(profit), "Economic profit"), makeStat(shutdown ? "Shut down" : "Operate", "Short-run decision"), makeStat(fmt.money(s.base), "Minimum AVC")], intuition: shutdown ? "Price is below avoidable cost, so producing would make operating losses worse." : "The firm produces where price meets marginal cost; fixed cost matters for profit but not the short-run output choice.", quiz: commonQuiz("Compare price with marginal cost and avoidable cost", "Compare price only with fixed cost", "Fixed costs affect profit, but not whether the next unit is worth producing.") };
       }
     };
@@ -539,9 +614,34 @@
         const pOpt = s.a - s.b * qOpt;
         const p = Math.max(0, s.a - s.b * s.q);
         const profit = (p - s.mc) * s.q;
-        const f = frame(760, 420, 100, 160);
-        const visual = chart(760, 420, html`${f.axis}<line class="demand-line" x1="${f.x(0)}" y1="${f.y(s.a)}" x2="${f.x(100)}" y2="${f.y(s.a - s.b * 100)}"></line><line class="tax-adjusted-line" x1="${f.x(0)}" y1="${f.y(s.a)}" x2="${f.x(100)}" y2="${f.y(s.a - 2 * s.b * 100)}"></line><line class="supply-line" x1="${f.x(0)}" y1="${f.y(s.mc)}" x2="${f.x(100)}" y2="${f.y(s.mc)}"></line><circle class="tax-point" cx="${f.x(qOpt)}" cy="${f.y(pOpt)}" r="5"></circle><circle class="eq-point" cx="${f.x(s.q)}" cy="${f.y(p)}" r="5"></circle><text class="curve-label" x="${f.x(70)}" y="${f.y(s.a - s.b * 70)}">Demand</text><text class="curve-label" x="${f.x(40)}" y="${f.y(s.a - 2 * s.b * 40)}">MR</text>`);
-        return { visualTitle: "Demand, MR, and MC", visualNote: "The red point is the profit-maximizing monopoly quantity.", visual, stats: [makeStat(fmt.number(qOpt), "Optimal quantity"), makeStat(fmt.money(pOpt), "Optimal price"), makeStat(fmt.wholeMoney(profit), "Profit at chosen Q"), makeStat(fmt.money(p - s.mc), "Markup at chosen Q")], intuition: "The monopoly optimum is where marginal revenue equals marginal cost, then price is read from demand.", quiz: commonQuiz("Set MR equal to MC, then read price from demand", "Set demand equal to MC directly", "A monopolist's marginal revenue is below price because extra sales lower the price on inframarginal units.") };
+        const qComp = Math.max(0, (s.a - s.mc) / s.b);
+        const cs = 0.5 * Math.max(0, s.a - p) * s.q;
+        const dwl = s.q < qComp ? 0.5 * Math.max(0, p - s.mc) * (qComp - s.q) : 0;
+        const qChoke = s.a / s.b;
+        const xMax = Math.max(60, Math.ceil(Math.max(s.q, qOpt, qComp) * 1.25 / 10) * 10);
+        const yMax = Math.max(120, Math.ceil(Math.max(s.a, p, s.mc) / 25) * 25);
+        const f = frame(760, 420, xMax, yMax);
+        const demandEnd = Math.min(xMax, qChoke);
+        const mrEnd = Math.min(xMax, s.a / (2 * s.b));
+        const csShape = s.q > 0 ? `<polygon class="area-cs" points="${linePath([[0, s.a], [0, p], [s.q, p]], f)}"></polygon>` : "";
+        const profitShape = s.q > 0 ? `<polygon class="${profit >= 0 ? "area-profit" : "area-loss"}" points="${linePath([[0, Math.min(p, s.mc)], [s.q, Math.min(p, s.mc)], [s.q, Math.max(p, s.mc)], [0, Math.max(p, s.mc)]], f)}"></polygon>` : "";
+        const dwlShape = dwl > 0 ? `<polygon class="area-dwl" points="${linePath([[s.q, p], [s.q, s.mc], [qComp, s.mc]], f)}"></polygon>` : "";
+        const visual = chart(760, 420, html`
+          ${f.axis}
+          ${csShape}
+          ${profitShape}
+          ${dwlShape}
+          <line class="demand-line" x1="${f.x(0)}" y1="${f.y(s.a)}" x2="${f.x(demandEnd)}" y2="${f.y(Math.max(0, linearDemand(s.a, s.b, demandEnd)))}"></line>
+          <line class="tax-adjusted-line" x1="${f.x(0)}" y1="${f.y(s.a)}" x2="${f.x(mrEnd)}" y2="${f.y(Math.max(0, s.a - 2 * s.b * mrEnd))}"></line>
+          <line class="supply-line" x1="${f.x(0)}" y1="${f.y(s.mc)}" x2="${f.margin.l + f.w}" y2="${f.y(s.mc)}"></line>
+          <line class="guide-line" x1="${f.x(s.q)}" y1="${f.y(p)}" x2="${f.x(s.q)}" y2="${f.margin.t + f.h}"></line>
+          <circle class="tax-point" cx="${f.x(qOpt)}" cy="${f.y(pOpt)}" r="5"></circle>
+          <circle class="eq-point" cx="${f.x(s.q)}" cy="${f.y(p)}" r="5"></circle>
+          <text class="curve-label" x="${f.x(xMax * 0.62)}" y="${f.y(linearDemand(s.a, s.b, xMax * 0.62)) - 8}">Demand</text>
+          <text class="curve-label" x="${f.x(xMax * 0.30)}" y="${f.y(s.a - 2 * s.b * xMax * 0.30) - 8}">MR</text>
+          <text class="curve-label" x="${f.x(xMax * 0.78)}" y="${f.y(s.mc) - 8}">MC</text>
+        `);
+        return { visualTitle: "Demand, MR, and MC", visualNote: "Shaded regions show consumer surplus, profit or loss, and deadweight loss at the chosen quantity.", visual, stats: [makeStat(fmt.number(qOpt), "Optimal quantity"), makeStat(fmt.money(pOpt), "Optimal price"), makeStat(fmt.wholeMoney(profit), "Profit at chosen Q"), makeStat(fmt.wholeMoney(cs), "Consumer surplus"), makeStat(fmt.wholeMoney(dwl), "Deadweight loss")], intuition: "The monopoly optimum is where marginal revenue equals marginal cost, then price is read from demand.", quiz: commonQuiz("Set MR equal to MC, then read price from demand", "Set demand equal to MC directly", "A monopolist's marginal revenue is below price because extra sales lower the price on inframarginal units.") };
       }
     };
   }
@@ -567,11 +667,36 @@
       render(s) {
         const priceHigh = s.aValue;
         const priceLow = s.bValue;
-        const uniformHigh = (priceHigh - s.mc) * s.aSize;
-        const uniformLow = (priceLow - s.mc) * (s.aSize + s.bSize);
+        const uniformHigh = Math.max(0, priceHigh - s.mc) * s.aSize;
+        const uniformLow = Math.max(0, priceLow - s.mc) * (s.aSize + s.bSize);
         const uniform = Math.max(uniformHigh, uniformLow);
-        const segmentedProfit = s.arbitrage === "yes" ? uniform : (priceHigh - s.mc) * s.aSize + (priceLow - s.mc) * s.bSize;
-        return { visualTitle: "Uniform vs Segment Prices", visualNote: "Arbitrage collapses segment prices toward a single effective price.", visual: `<div class="bar-list"><div style="width:${Math.min(100, uniform / Math.max(uniform, segmentedProfit) * 100)}%">Uniform profit ${fmt.wholeMoney(uniform)}</div><div style="width:${Math.min(100, segmentedProfit / Math.max(uniform, segmentedProfit) * 100)}%">Segment profit ${fmt.wholeMoney(segmentedProfit)}</div></div>`, stats: [makeStat(fmt.wholeMoney(uniform), "Best uniform profit"), makeStat(fmt.wholeMoney(segmentedProfit), "Segment pricing profit"), makeStat(s.arbitrage === "yes" ? "No" : "Yes", "Discrimination feasible"), makeStat(fmt.money(s.mc), "Marginal cost")], intuition: "Price discrimination needs market power, identifiable segments, and limited resale. Without those, customers route around the menu.", quiz: commonQuiz("Whether segments can be separated without arbitrage", "Whether all customers have identical WTP", "Segment pricing only works when low-price customers cannot resell or masquerade as high-price customers.") };
+        const segmentedProfit = s.arbitrage === "yes" ? uniform : Math.max(0, priceHigh - s.mc) * s.aSize + Math.max(0, priceLow - s.mc) * s.bSize;
+        const uniformPrice = uniformHigh >= uniformLow ? priceHigh : priceLow;
+        const uniformCustomers = uniformHigh >= uniformLow ? s.aSize : s.aSize + s.bSize;
+        const maxCustomers = Math.max(s.aSize + s.bSize, 1);
+        const maxMargin = Math.max(priceHigh - s.mc, priceLow - s.mc, uniformPrice - s.mc, 1);
+        const rect = (x, yBase, customers, margin, label) => {
+          const width = Math.max(0, customers / maxCustomers * 500);
+          const height = Math.max(0, margin / maxMargin * 70);
+          return html`
+            <rect class="area-profit" x="${x}" y="${yBase - height}" width="${width}" height="${height}"></rect>
+            <text class="point-label" x="${x + 8}" y="${yBase - height - 8}">${label}</text>
+          `;
+        };
+        const segmentedShapes = s.arbitrage === "yes" ? rect(120, 250, uniformCustomers, Math.max(0, uniformPrice - s.mc), "arbitrage forces one price") : html`
+          ${rect(120, 250, s.aSize, Math.max(0, priceHigh - s.mc), "Segment A")}
+          ${rect(120 + s.aSize / maxCustomers * 500 + 8, 250, s.bSize, Math.max(0, priceLow - s.mc), "Segment B")}
+        `;
+        const visual = chart(720, 340, html`
+          <line class="axis" x1="110" y1="120" x2="640" y2="120"></line>
+          <line class="axis" x1="110" y1="250" x2="640" y2="250"></line>
+          <text class="curve-label" x="34" y="124">Uniform</text>
+          <text class="curve-label" x="24" y="254">Segmented</text>
+          ${rect(120, 120, uniformCustomers, Math.max(0, uniformPrice - s.mc), "one price")}
+          ${segmentedShapes}
+          <text class="axis-label" x="375" y="318" text-anchor="middle">Profit rectangles: customers times price-cost margin</text>
+        `);
+        return { visualTitle: "Uniform vs Segment Prices", visualNote: "Arbitrage collapses segment prices toward a single effective price.", visual, stats: [makeStat(fmt.wholeMoney(uniform), "Best uniform profit"), makeStat(fmt.wholeMoney(segmentedProfit), "Segment pricing profit"), makeStat(s.arbitrage === "yes" ? "No" : "Yes", "Discrimination feasible"), makeStat(fmt.money(s.mc), "Marginal cost")], intuition: "Price discrimination needs market power, identifiable segments, and limited resale. Without those, customers route around the menu.", quiz: commonQuiz("Whether segments can be separated without arbitrage", "Whether all customers have identical WTP", "Segment pricing only works when low-price customers cannot resell or masquerade as high-price customers.") };
       }
     };
   }
@@ -586,7 +711,37 @@
         const cs = 0.5 * Math.max(0, s.a - s.usage) * q;
         const joins = s.fee <= cs;
         const profit = joins ? (s.usage - s.mc) * q + s.fee : 0;
-        return { visualTitle: "Usage Price and Membership Fee", visualNote: "If the fee exceeds surplus, the consumer walks away.", visual: demandOnlyChart(s.a, s.b, s.usage), stats: [makeStat(fmt.number(q), "Usage units"), makeStat(fmt.wholeMoney(cs), "Consumer surplus before fee"), makeStat(joins ? "Joins" : "Does not join", "Participation"), makeStat(fmt.wholeMoney(profit), "Firm profit")], intuition: "With identical consumers, set usage price near marginal cost to maximize total surplus, then use the membership fee to capture it.", quiz: commonQuiz("Usage fee affects quantity; membership fee extracts surplus", "Membership fee affects marginal usage", "The two parts do different jobs in the pricing plan.") };
+        const xMax = Math.max(40, Math.ceil((s.a / s.b) / 10) * 10);
+        const yMax = Math.max(120, Math.ceil(Math.max(s.a, s.usage, s.mc) / 25) * 25);
+        const f = frame(720, 380, xMax, yMax);
+        const demandEnd = Math.min(xMax, s.a / s.b);
+        const csShape = q > 0 ? `<polygon class="area-cs" points="${linePath([[0, s.a], [0, s.usage], [q, s.usage]], f)}"></polygon>` : "";
+        const revenueShape = q > 0 ? `<polygon class="area-revenue" points="${linePath([[0, 0], [q, 0], [q, s.usage], [0, s.usage]], f)}"></polygon>` : "";
+        const marginShape = q > 0 ? `<polygon class="${s.usage >= s.mc ? "area-profit" : "area-loss"}" points="${linePath([[0, Math.min(s.usage, s.mc)], [q, Math.min(s.usage, s.mc)], [q, Math.max(s.usage, s.mc)], [0, Math.max(s.usage, s.mc)]], f)}"></polygon>` : "";
+        const feeShare = cs > 0 ? clamp(s.fee / cs, 0, 1) : 0;
+        const feeHeight = Math.max(0, Math.min(82, feeShare * 82));
+        const feeBox = html`
+          <g>
+            <rect x="610" y="76" width="42" height="82" fill="none" stroke="#d9e2ec"></rect>
+            <rect class="area-tax" x="610" y="${158 - feeHeight}" width="42" height="${feeHeight}"></rect>
+            <text class="point-label" x="631" y="176" text-anchor="middle">Fee</text>
+          </g>
+        `;
+        const visual = chart(720, 380, html`
+          ${f.axis}
+          ${revenueShape}
+          ${marginShape}
+          ${csShape}
+          <line class="demand-line" x1="${f.x(0)}" y1="${f.y(s.a)}" x2="${f.x(demandEnd)}" y2="${f.y(Math.max(0, linearDemand(s.a, s.b, demandEnd)))}"></line>
+          <line class="tax-adjusted-line" x1="${f.margin.l}" y1="${f.y(s.usage)}" x2="${f.x(q)}" y2="${f.y(s.usage)}"></line>
+          <line class="supply-line" x1="${f.margin.l}" y1="${f.y(s.mc)}" x2="${f.margin.l + f.w}" y2="${f.y(s.mc)}"></line>
+          <line class="guide-line" x1="${f.x(q)}" y1="${f.y(s.usage)}" x2="${f.x(q)}" y2="${f.margin.t + f.h}"></line>
+          <circle class="eq-point" cx="${f.x(q)}" cy="${f.y(s.usage)}" r="5"></circle>
+          <text class="curve-label" x="${f.x(xMax * 0.62)}" y="${f.y(linearDemand(s.a, s.b, xMax * 0.62)) - 8}">Demand</text>
+          <text class="curve-label" x="${f.x(xMax * 0.78)}" y="${f.y(s.mc) - 8}">MC</text>
+          ${feeBox}
+        `);
+        return { visualTitle: "Usage Price and Membership Fee", visualNote: "If the fee exceeds surplus, the consumer walks away.", visual, stats: [makeStat(fmt.number(q), "Usage units"), makeStat(fmt.wholeMoney(cs), "Consumer surplus before fee"), makeStat(joins ? "Joins" : "Does not join", "Participation"), makeStat(fmt.wholeMoney(profit), "Firm profit")], intuition: "With identical consumers, set usage price near marginal cost to maximize total surplus, then use the membership fee to capture it.", quiz: commonQuiz("Usage fee affects quantity; membership fee extracts surplus", "Membership fee affects marginal usage", "The two parts do different jobs in the pricing plan.") };
       }
     };
   }
@@ -602,7 +757,35 @@
         const lowChoice = Math.max(0, lowSmall, lowLarge) === lowLarge ? "large" : Math.max(0, lowSmall, lowLarge) === lowSmall ? "small" : "none";
         const highChoice = Math.max(0, highSmall, highLarge) === highLarge ? "large" : Math.max(0, highSmall, highLarge) === highSmall ? "small" : "none";
         const profit = (lowChoice === "small" ? s.smallPrice : lowChoice === "large" ? s.largePrice : 0) + (highChoice === "small" ? s.smallPrice : highChoice === "large" ? s.largePrice : 0);
-        return { visualTitle: "Self-Selection Menu", visualNote: "The firm wants high types to pick large and low types to pick small.", visual: `<div class="choice-summary"><div>Low type chooses <strong>${lowChoice}</strong></div><div>High type chooses <strong>${highChoice}</strong></div></div>`, stats: [makeStat(lowChoice, "Low-type choice"), makeStat(highChoice, "High-type choice"), makeStat(fmt.wholeMoney(profit), "Revenue from one of each type"), makeStat(highLarge - highSmall > 0 ? "Large attracts high type" : "High type tempted by small", "Incentive check")], intuition: "The hard part is not just extracting value; it is leaving enough information rent so high-demand customers choose the intended option.", quiz: commonQuiz("Which option each type voluntarily chooses", "Which option has the highest posted price", "Screening works through self-selection, not labels.") };
+        const chosenValue = (type) => {
+          if (type === "low") return lowChoice === "small" ? s.smallValue : lowChoice === "large" ? s.lowValue : 0;
+          return highChoice === "small" ? s.smallValue : highChoice === "large" ? s.highValue : 0;
+        };
+        const chosenPrice = (type) => {
+          if (type === "low") return lowChoice === "small" ? s.smallPrice : lowChoice === "large" ? s.largePrice : 0;
+          return highChoice === "small" ? s.smallPrice : highChoice === "large" ? s.largePrice : 0;
+        };
+        const maxValue = Math.max(s.highValue, s.lowValue, s.smallValue, s.largePrice, 1);
+        const drawType = (label, choice, value, price, y) => {
+          const scale = 520 / maxValue;
+          const paidWidth = Math.max(0, Math.min(price, value)) * scale;
+          const surplusWidth = Math.max(0, value - price) * scale;
+          return html`
+            <text class="curve-label" x="56" y="${y - 12}">${label}: ${choice}</text>
+            <rect x="150" y="${y - 34}" width="${value * scale}" height="38" fill="none" stroke="#d9e2ec"></rect>
+            <rect class="area-revenue" x="150" y="${y - 34}" width="${paidWidth}" height="38"></rect>
+            <rect class="area-cs" x="${150 + paidWidth}" y="${y - 34}" width="${surplusWidth}" height="38"></rect>
+            <text class="point-label" x="156" y="${y - 10}">paid ${fmt.wholeMoney(price)}</text>
+            <text class="point-label" x="${156 + paidWidth + Math.min(20, surplusWidth)}" y="${y - 10}">surplus ${fmt.wholeMoney(Math.max(0, value - price))}</text>
+          `;
+        };
+        const visual = chart(720, 300, html`
+          <line class="axis" x1="150" y1="246" x2="670" y2="246"></line>
+          <text class="axis-label" x="410" y="282" text-anchor="middle">Value split into payment and information rent</text>
+          ${drawType("Low type", lowChoice, chosenValue("low"), chosenPrice("low"), 105)}
+          ${drawType("High type", highChoice, chosenValue("high"), chosenPrice("high"), 185)}
+        `);
+        return { visualTitle: "Self-Selection Menu", visualNote: "Gold is price paid; blue is surplus left so each type self-selects.", visual, stats: [makeStat(lowChoice, "Low-type choice"), makeStat(highChoice, "High-type choice"), makeStat(fmt.wholeMoney(profit), "Revenue from one of each type"), makeStat(highLarge - highSmall > 0 ? "Large attracts high type" : "High type tempted by small", "Incentive check")], intuition: "The hard part is not just extracting value; it is leaving enough information rent so high-demand customers choose the intended option.", quiz: commonQuiz("Which option each type voluntarily chooses", "Which option has the highest posted price", "Screening works through self-selection, not labels.") };
       }
     };
   }
@@ -666,7 +849,22 @@
         const prob = (high ? s.pHigh : s.pLow) / 100;
         const agentPay = s.commission * prob - (high ? s.effortCost : 0);
         const principalProfit = (s.revenue - s.commission) * prob;
-        return { visualTitle: "Incentive Constraint", visualNote: "High effort occurs when expected commission gain covers effort cost.", visual: `<div class="bar-list"><div style="width:${Math.min(100, s.commission * deltaP * 2)}%">Expected incentive ${fmt.money(s.commission * deltaP)}</div><div style="width:${Math.min(100, s.effortCost * 2)}%">Effort cost ${fmt.money(s.effortCost)}</div></div>`, stats: [makeStat(high ? "High effort" : "Low effort", "Agent choice"), makeStat(fmt.money(agentPay), "Agent expected payoff"), makeStat(fmt.money(principalProfit), "Principal expected profit"), makeStat(fmt.pct(prob), "Sale probability")], intuition: "The principal cannot directly choose effort; the contract changes the agent's private tradeoff.", quiz: commonQuiz("The agent's incentive constraint", "The principal's preferred effort only", "Moral hazard is about hidden actions chosen after the contract is set.") };
+        const incentive = s.commission * deltaP;
+        const maxDollar = Math.max(s.revenue, s.commission, s.effortCost, principalProfit, incentive, 1);
+        const w = (v) => Math.max(0, Math.min(520, v / maxDollar * 520));
+        const visual = chart(720, 300, html`
+          <line class="axis" x1="130" y1="236" x2="660" y2="236"></line>
+          <text class="curve-label" x="44" y="90">Agent</text>
+          <rect class="area-profit" x="130" y="66" width="${w(incentive)}" height="34"></rect>
+          <rect class="area-loss" x="130" y="112" width="${w(s.effortCost)}" height="34"></rect>
+          <text class="point-label" x="138" y="88">expected incentive ${fmt.money(incentive)}</text>
+          <text class="point-label" x="138" y="134">effort cost ${fmt.money(s.effortCost)}</text>
+          <text class="curve-label" x="30" y="198">Principal</text>
+          <rect class="${principalProfit >= 0 ? "area-profit" : "area-loss"}" x="130" y="174" width="${w(Math.abs(principalProfit))}" height="34"></rect>
+          <text class="point-label" x="138" y="196">expected profit ${fmt.money(principalProfit)}</text>
+          <text class="axis-label" x="395" y="278" text-anchor="middle">Expected dollars from the contract</text>
+        `);
+        return { visualTitle: "Incentive Constraint", visualNote: "High effort occurs when expected commission gain covers effort cost.", visual, stats: [makeStat(high ? "High effort" : "Low effort", "Agent choice"), makeStat(fmt.money(agentPay), "Agent expected payoff"), makeStat(fmt.money(principalProfit), "Principal expected profit"), makeStat(fmt.pct(prob), "Sale probability")], intuition: "The principal cannot directly choose effort; the contract changes the agent's private tradeoff.", quiz: commonQuiz("The agent's incentive constraint", "The principal's preferred effort only", "Moral hazard is about hidden actions chosen after the contract is set.") };
       }
     };
   }
@@ -745,7 +943,32 @@
         const pi2 = (s.p2 - s.mc) * q2;
         const br1 = (100 + s.diff * s.p2 + s.mc) / 2;
         const br2 = (100 + s.diff * s.p1 + s.mc) / 2;
-        return { visualTitle: "Prices and Best Responses", visualNote: "With differentiated products, rival price affects your demand.", visual: `<div class="bar-list"><div style="width:${Math.min(100, q1)}%">Firm 1 quantity ${fmt.number(q1)}</div><div style="width:${Math.min(100, q2)}%">Firm 2 quantity ${fmt.number(q2)}</div></div>`, stats: [makeStat(fmt.wholeMoney(pi1), "Firm 1 profit"), makeStat(fmt.wholeMoney(pi2), "Firm 2 profit"), makeStat(fmt.money(br1), "Firm 1 best response"), makeStat(fmt.money(br2), "Firm 2 best response")], intuition: "A Nash price pair occurs when each firm's chosen price is its best response to the other's price.", quiz: commonQuiz("Compare each price with its best response", "Only compare market shares", "Price competition is strategic because your best price depends on your rival's price.") };
+        const maxQ = Math.max(120, q1, q2);
+        const maxMargin = Math.max(60, Math.abs(s.p1 - s.mc), Math.abs(s.p2 - s.mc));
+        const drawFirm = (label, price, q, profit, x0) => {
+          const width = Math.max(2, Math.min(240, q / maxQ * 240));
+          const margin = price - s.mc;
+          const height = Math.max(2, Math.min(150, Math.abs(margin) / maxMargin * 150));
+          const baseY = 220;
+          const y = margin >= 0 ? baseY - height : baseY;
+          return html`
+            <g>
+              <text class="curve-label" x="${x0}" y="56">${label}</text>
+              <line class="axis" x1="${x0}" y1="${baseY}" x2="${x0 + 260}" y2="${baseY}"></line>
+              <line class="axis" x1="${x0}" y1="58" x2="${x0}" y2="336"></line>
+              <rect class="${profit >= 0 ? "area-profit" : "area-loss"}" x="${x0}" y="${y}" width="${width}" height="${height}"></rect>
+              <line class="tax-adjusted-line" x1="${x0}" y1="${baseY - (price - s.mc) / maxMargin * 150}" x2="${x0 + width}" y2="${baseY - (price - s.mc) / maxMargin * 150}"></line>
+              <text class="point-label" x="${x0 + 8}" y="${margin >= 0 ? y - 8 : y + height + 18}">profit ${fmt.wholeMoney(profit)}</text>
+              <text class="point-label" x="${x0 + 8}" y="342">Q ${fmt.number(q)}</text>
+            </g>
+          `;
+        };
+        const visual = chart(720, 380, html`
+          ${drawFirm("Firm 1", s.p1, q1, pi1, 80)}
+          ${drawFirm("Firm 2", s.p2, q2, pi2, 400)}
+          <text class="axis-label" x="360" y="366" text-anchor="middle">Profit area = quantity times price-cost margin</text>
+        `);
+        return { visualTitle: "Prices and Best Responses", visualNote: "With differentiated products, rival price affects your demand.", visual, stats: [makeStat(fmt.wholeMoney(pi1), "Firm 1 profit"), makeStat(fmt.wholeMoney(pi2), "Firm 2 profit"), makeStat(fmt.money(br1), "Firm 1 best response"), makeStat(fmt.money(br2), "Firm 2 best response")], intuition: "A Nash price pair occurs when each firm's chosen price is its best response to the other's price.", quiz: commonQuiz("Compare each price with its best response", "Only compare market shares", "Price competition is strategic because your best price depends on your rival's price.") };
       }
     };
   }

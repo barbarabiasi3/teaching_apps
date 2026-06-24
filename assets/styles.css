@@ -501,12 +501,34 @@ select:focus-visible {
   fill: rgba(217, 154, 34, 0.32);
 }
 
+.area-revenue {
+  fill: rgba(217, 154, 34, 0.24);
+}
+
+.area-profit {
+  fill: rgba(42, 157, 143, 0.24);
+}
+
+.area-loss {
+  fill: rgba(201, 79, 79, 0.20);
+}
+
 .area-dwl {
   fill: rgba(201, 79, 79, 0.24);
 }
 
+.area-external {
+  fill: rgba(201, 79, 79, 0.16);
+}
+
 .bar-buy {
   fill: var(--yale-blue);
+}
+
+.bar-outline {
+  fill: none;
+  stroke: var(--yale-blue);
+  stroke-width: 1.4;
 }
 
 .bar-out {
