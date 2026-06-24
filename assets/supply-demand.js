@@ -180,7 +180,7 @@
   }
 
   function renderControls(state) {
-    outputs.demandIntercept.value = `P choke price = ${fmt.money(state.demandIntercept)}`;
+    outputs.demandIntercept.value = `Highest value on the demand curve = ${fmt.money(state.demandIntercept)}`;
     outputs.demandSlope.value = `Each extra unit lowers willingness to pay by ${fmt.money(state.demandSlope)}`;
     outputs.supplyIntercept.value = `First unit costs ${fmt.money(state.supplyIntercept)}`;
     outputs.supplySlope.value = `Marginal cost rises by ${fmt.money(state.supplySlope)} per unit`;

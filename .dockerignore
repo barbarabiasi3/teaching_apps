@@ -1,0 +1,8 @@
+.git
+.DS_Store
+slides
+*.log
+node_modules
+tmp
+dist
+build

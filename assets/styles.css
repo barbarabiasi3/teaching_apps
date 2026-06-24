@@ -27,6 +27,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 15px;
   letter-spacing: 0;
+  overflow-x: hidden;
 }
 
 a {
@@ -47,28 +48,28 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 24px;
+  max-width: 100%;
+  min-width: 0;
   color: var(--yale-blue);
   text-decoration: none;
 }
 
-.brand-mark {
-  display: grid;
+.brand-logo {
+  display: block;
   flex: 0 0 auto;
   width: clamp(54px, 7vw, 88px);
-  aspect-ratio: 1;
-  place-items: center;
-  color: var(--white);
-  background: var(--yale-blue);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(32px, 5vw, 56px);
-  line-height: 1;
+  max-height: 96px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .school-name {
+  min-width: 0;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(25px, 3.2vw, 44px);
   font-variant: small-caps;
   line-height: 1;
+  overflow-wrap: anywhere;
   white-space: normal;
 }
 
@@ -141,8 +142,8 @@ h2 {
 
 .topic-band,
 .tool-workspace,
-.market-panel,
-.active-recall {
+.summary-panel,
+.check-understanding {
   padding: 28px 0;
   border-top: 1px solid var(--line);
 }
@@ -202,21 +203,52 @@ h2 {
   font-weight: 700;
 }
 
-.tool-layout {
+.simulator-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.05fr);
-  gap: 22px;
+  grid-template-columns: minmax(340px, 420px) minmax(520px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.simulator-sidebar {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
 }
 
 .control-panel,
-.summary-panel {
+.summary-panel,
+.market-panel {
   min-width: 0;
+}
+
+.outcomes-heading {
+  display: block;
+  margin-bottom: 22px;
+  width: 100%;
+  text-align: center;
+}
+
+.outcomes-heading h2 {
+  display: inline-block;
+  margin: 0 auto;
+  max-width: 100%;
+  text-align: center;
+}
+
+.stats-grid,
+.intuition-box {
+  text-align: left;
 }
 
 .control-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.simulator-sidebar .control-grid {
+  grid-template-columns: 1fr;
 }
 
 .range-control,
@@ -252,6 +284,18 @@ h2 {
 input[type="range"] {
   width: 100%;
   accent-color: var(--yale-blue);
+}
+
+select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--white);
+  font: inherit;
+  font-weight: 700;
 }
 
 .segmented-control {
@@ -314,14 +358,15 @@ button:hover,
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: 3px solid rgba(40, 109, 192, 0.35);
   outline-offset: 2px;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -341,6 +386,7 @@ input:focus-visible {
   font-size: clamp(22px, 3vw, 30px);
   font-weight: 900;
   line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 
 .stat-label {
@@ -358,10 +404,6 @@ input:focus-visible {
   line-height: 1.48;
 }
 
-.market-panel {
-  margin-top: 28px;
-}
-
 .market-chart {
   display: block;
   width: 100%;
@@ -369,6 +411,14 @@ input:focus-visible {
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #fcfdff;
+}
+
+.mini-chart {
+  max-height: 520px;
+}
+
+.no-fill {
+  fill: none;
 }
 
 .axis {
@@ -410,6 +460,12 @@ input:focus-visible {
   stroke-dasharray: 8 6;
 }
 
+.policy-line {
+  stroke: var(--gold);
+  stroke-width: 2.4;
+  stroke-dasharray: 5 5;
+}
+
 .guide-line {
   stroke: #64748b;
   stroke-width: 1.4;
@@ -447,6 +503,121 @@ input:focus-visible {
 
 .area-dwl {
   fill: rgba(201, 79, 79, 0.24);
+}
+
+.bar-buy {
+  fill: var(--yale-blue);
+}
+
+.bar-out {
+  fill: #cbd5e1;
+}
+
+.bar-list,
+.choice-summary,
+.tree-diagram,
+.matrix-wrap {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fcfdff;
+}
+
+.bar-list {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.bar-list div {
+  min-width: fit-content;
+  max-width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: var(--white);
+  border-radius: 5px;
+  background: var(--yale-blue);
+  font-weight: 900;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.bar-list div:nth-child(2) {
+  background: var(--green);
+}
+
+.choice-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 18px;
+}
+
+.choice-summary div {
+  min-height: 78px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--white);
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.tree-diagram {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.tree-branch {
+  padding: 14px;
+  border-left: 4px solid var(--yale-blue);
+  background: var(--soft);
+}
+
+.matrix-wrap {
+  overflow-x: auto;
+  padding: 16px;
+}
+
+.matrix-wrap h3 {
+  margin: 0 0 12px;
+  color: var(--yale-blue);
+  font-size: 18px;
+}
+
+.payoff-matrix {
+  width: 100%;
+  min-width: 440px;
+  border-collapse: collapse;
+  background: var(--white);
+}
+
+.payoff-matrix th,
+.payoff-matrix td {
+  padding: 14px;
+  border: 1px solid var(--line);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.payoff-matrix th {
+  color: var(--yale-blue);
+  font-weight: 900;
+}
+
+.payoff-matrix td {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.payoff-matrix td.is-highlighted {
+  color: #0d4d42;
+  border-color: var(--green);
+  background: var(--green-soft);
 }
 
 .legend-row {
@@ -543,7 +714,7 @@ input:focus-visible {
 }
 
 @media (max-width: 900px) {
-  .tool-layout,
+  .simulator-layout,
   .quiz-grid {
     grid-template-columns: 1fr;
   }
@@ -566,7 +737,22 @@ input:focus-visible {
   }
 
   .wordmark {
-    gap: 16px;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .brand-logo {
+    width: 48px;
+  }
+
+  .school-name {
+    font-size: clamp(20px, 7vw, 28px);
+    line-height: 1.06;
+  }
+
+  .main-nav {
+    flex-wrap: wrap;
   }
 
   .hero,
@@ -580,8 +766,12 @@ input:focus-visible {
     flex-direction: column;
   }
 
-  .control-grid,
-  .stats-grid {
+  .control-grid {
     grid-template-columns: 1fr;
+  }
+
+  .segmented-control {
+    grid-template-columns: 1fr;
+    min-height: auto;
   }
 }
