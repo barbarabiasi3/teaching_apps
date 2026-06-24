@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Supply, Demand, and Welfare | Interactive Learning Tools</title>
+    <link rel="stylesheet" href="../../assets/styles.css">
+    <script defer src="../../assets/supply-demand.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="wordmark" href="../../" aria-label="Interactive learning tools home">
+        <span class="brand-mark" aria-hidden="true">Y</span>
+        <span class="school-name"><span>Yale</span> School of Management</span>
+      </a>
+      <nav class="main-nav" aria-label="Primary navigation">
+        <a href="../../">Topics</a>
+        <a href="#active-recall">Quiz</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="topic-hero compact-hero">
+        <a class="back-link" href="../../">Back to topics</a>
+        <p class="course-kicker">Supply, Demand, and Welfare</p>
+        <h1>Tax Incidence Sandbox</h1>
+        <p class="hero-copy">A competitive market turns a tax into a wedge: buyers care about the gross price, sellers care about the net price, and the less responsive side bears more of the burden.</p>
+      </section>
+
+      <section class="tool-workspace" aria-label="Supply, demand, and welfare interactive tool">
+        <div class="tool-layout">
+          <section class="control-panel" aria-labelledby="controls-heading">
+            <div class="panel-heading">
+              <h2 id="controls-heading">Model Inputs</h2>
+              <button class="secondary-button" type="button" id="reset-button">Reset</button>
+            </div>
+
+            <div class="control-grid">
+              <label class="range-control" for="demand-intercept">
+                <span>Demand intercept</span>
+                <input id="demand-intercept" type="range" min="95" max="150" step="1" value="120">
+                <output id="demand-intercept-output" for="demand-intercept"></output>
+              </label>
+
+              <label class="range-control" for="demand-slope">
+                <span>Demand slope</span>
+                <input id="demand-slope" type="range" min="0.45" max="1.70" step="0.05" value="0.95">
+                <output id="demand-slope-output" for="demand-slope"></output>
+              </label>
+
+              <label class="range-control" for="supply-intercept">
+                <span>Supply intercept</span>
+                <input id="supply-intercept" type="range" min="0" max="45" step="1" value="24">
+                <output id="supply-intercept-output" for="supply-intercept"></output>
+              </label>
+
+              <label class="range-control" for="supply-slope">
+                <span>Supply slope</span>
+                <input id="supply-slope" type="range" min="0.35" max="1.60" step="0.05" value="0.75">
+                <output id="supply-slope-output" for="supply-slope"></output>
+              </label>
+
+              <label class="range-control" for="tax">
+                <span>Per-unit tax</span>
+                <input id="tax" type="range" min="0" max="40" step="1" value="18">
+                <output id="tax-output" for="tax"></output>
+              </label>
+
+              <fieldset class="segmented-control">
+                <legend>Tax collected from</legend>
+                <label>
+                  <input type="radio" name="tax-side" value="sellers" checked>
+                  <span>Sellers</span>
+                </label>
+                <label>
+                  <input type="radio" name="tax-side" value="buyers">
+                  <span>Buyers</span>
+                </label>
+              </fieldset>
+            </div>
+          </section>
+
+          <section class="summary-panel" aria-labelledby="summary-heading">
+            <h2 id="summary-heading">Live Readout</h2>
+            <div class="stats-grid" id="stats-grid"></div>
+            <div class="intuition-box" id="intuition-box" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <section class="market-panel" aria-labelledby="market-heading">
+          <div class="section-heading">
+            <h2 id="market-heading">Market Diagram</h2>
+            <p id="curve-equations"></p>
+          </div>
+          <svg id="market-chart" class="market-chart" viewBox="0 0 780 520" role="img" aria-labelledby="chart-title chart-desc">
+            <title id="chart-title">Supply and demand diagram with tax wedge and welfare areas</title>
+            <desc id="chart-desc">The chart updates as model inputs change, showing demand, supply, equilibrium quantity, buyer price, seller price, surplus areas, tax revenue, and deadweight loss.</desc>
+          </svg>
+          <div class="legend-row" aria-label="Chart legend">
+            <span><i class="legend-swatch swatch-cs"></i>Consumer surplus</span>
+            <span><i class="legend-swatch swatch-ps"></i>Producer surplus</span>
+            <span><i class="legend-swatch swatch-tax"></i>Tax revenue</span>
+            <span><i class="legend-swatch swatch-dwl"></i>Deadweight loss</span>
+          </div>
+        </section>
+
+        <section class="active-recall" id="active-recall" aria-labelledby="quiz-heading">
+          <div class="section-heading">
+            <h2 id="quiz-heading">Active Recall</h2>
+            <p>Questions adapt to the current slider values</p>
+          </div>
+          <div class="quiz-grid" id="quiz-grid"></div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
