@@ -680,32 +680,6 @@ select:focus-visible {
   fill: rgba(201, 79, 79, 0.16);
 }
 
-.tree-link,
-.tree-link-active {
-  fill: none;
-  stroke-width: 2.2;
-}
-
-.tree-link {
-  stroke: #cbd5e1;
-}
-
-.tree-link-active {
-  stroke: var(--yale-blue);
-}
-
-.game-node {
-  fill: var(--white);
-  stroke: var(--line);
-  stroke-width: 1.2;
-}
-
-.game-node.node-active {
-  fill: rgba(40, 109, 192, 0.10);
-  stroke: var(--yale-blue);
-  stroke-width: 1.8;
-}
-
 .bar-buy {
   fill: var(--yale-blue);
 }
@@ -722,7 +696,6 @@ select:focus-visible {
 
 .bar-list,
 .choice-summary,
-.tree-diagram,
 .matrix-wrap {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -769,20 +742,6 @@ select:focus-visible {
   font-size: 18px;
   font-weight: 800;
   line-height: 1.25;
-}
-
-.tree-diagram {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-  color: var(--ink);
-  font-weight: 800;
-}
-
-.tree-branch {
-  padding: 14px;
-  border-left: 4px solid var(--yale-blue);
-  background: var(--soft);
 }
 
 .matrix-wrap {

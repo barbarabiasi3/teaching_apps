@@ -22,12 +22,7 @@
     ["risk-aversion-insurance", "Uncertainty and Risk Preferences", "Compare expected value, certainty equivalent, and willingness to pay to avoid risk."],
     ["adverse-selection-lemons", "Adverse Selection and Lemons", "Change price and watch hidden types enter or exit."],
     ["signaling-screening", "Signaling and Screening", "Use warranties or deductibles to separate hidden types."],
-    ["moral-hazard-principal-agent", "Moral Hazard and Principal-Agent", "Set incentives and predict hidden effort."],
-    ["dominant-strategies", "Dominant Strategies", "Highlight dominant and dominated strategies in payoff matrices."],
-    ["nash-equilibrium-finder", "Nash Equilibrium Finder", "Mark best responses and find Nash equilibria."],
-    ["coordination-games", "Coordination Games", "Explore multiple equilibria and coordination failure."],
-    ["sequential-games-backward-induction", "Sequential Games and Backward Induction", "Solve a game tree from the end backward."],
-    ["price-competition-games", "Price Competition Games", "Let two firms choose prices and compare best responses."]
+    ["moral-hazard-principal-agent", "Moral Hazard and Principal-Agent", "Set incentives and predict hidden effort."]
   ];
 
   const fmt = {
@@ -78,8 +73,7 @@
     risk: { xMax: 1200, yMax: 1 },
     trade: { xMax: 700, yMax: 3200 },
     costMin: { xMax: 140, yMax: 180 },
-    signaling: { xMax: 5, yMax: 4000 },
-    priceGame: { xMax: 130, yMax: 130 }
+    signaling: { xMax: 5, yMax: 4000 }
   };
 
   function chart(width, height, body, extraClass = "") {
@@ -252,26 +246,6 @@
       <text class="curve-label" x="${f.x(demandLabelQ)}" y="${f.y(linearDemand(a, b, demandLabelQ)) - 8}">Demand</text>
       ${extras}
     `);
-  }
-
-  function payoffMatrix(title, rowLabels, colLabels, cells, highlights = []) {
-    const highlightSet = new Set(highlights);
-    return html`
-      <div class="matrix-wrap">
-        <h3>${title}</h3>
-        <table class="payoff-matrix">
-          <thead><tr><th></th>${colLabels.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
-          <tbody>
-            ${rowLabels.map((r, i) => `
-              <tr>
-                <th>${r}</th>
-                ${colLabels.map((c, j) => `<td class="${highlightSet.has(`${i}-${j}`) ? "is-highlighted" : ""}">${cells[i][j][0]}, ${cells[i][j][1]}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `;
   }
 
   function bestResponses(cells) {
@@ -521,12 +495,7 @@
       "risk-aversion-insurance": riskTool(),
       "adverse-selection-lemons": lemonsTool(),
       "signaling-screening": signalingTool(),
-      "moral-hazard-principal-agent": moralHazardTool(),
-      "dominant-strategies": dominantTool(),
-      "nash-equilibrium-finder": nashTool(),
-      "coordination-games": coordinationTool(),
-      "sequential-games-backward-induction": sequentialTool(),
-      "price-competition-games": priceCompetitionTool()
+      "moral-hazard-principal-agent": moralHazardTool()
     });
   }
 
@@ -1475,134 +1444,6 @@
           <text class="point-label" x="${f.x(s.commission) + 8}" y="${f.y(high ? highPay(s.commission) : lowPay(s.commission)) - 10}">Chosen contract</text>
         `);
         return { visualTitle: "Agent Effort Payoff Lines", visualNote: "High effort occurs once the commission makes the high-effort payoff at least as large as low effort.", visual, stats: [makeStat(high ? "High effort" : "Low effort", "Agent choice"), makeStat(threshold <= 100 ? fmt.money(threshold) : "Above range", "Threshold commission"), makeStat(fmt.money(agentPay), "Agent expected payoff"), makeStat(fmt.money(principalProfit), "Principal expected profit"), makeStat(fmt.pct(prob), "Sale probability")], intuition: "The principal cannot directly choose effort; the contract changes the agent's private tradeoff between low effort and costly high effort.", quiz: commonQuiz("The agent's incentive constraint", "The principal's preferred effort only", "Moral hazard is about hidden actions chosen after the contract is set.") };
-      }
-    };
-  }
-
-  function dominantTool() {
-    return {
-      title: "Dominant Strategies",
-      subtitle: "A dominant strategy is best no matter what the rival does.",
-      controls: [select("game", "Example game", "ads", [["ads", "Advertising dilemma"], ["launch", "Software launch"], ["toy", "3x3 exercise"]])],
-      render(s) {
-        const games = {
-          ads: { r: ["H Ad", "L Ad"], c: ["H Ad", "L Ad"], cells: [[[20, 20], [50, 10]], [[10, 50], [40, 40]]], h: ["0-0"], msg: "Heavy advertising is dominant for both firms, even though light advertising would make both better off." },
-          launch: { r: ["Launch", "Not"], c: ["Launch", "Not"], cells: [[[-20, -20], [30, -10]], [[-10, 30], [0, 0]]], h: [], msg: "There is no dominant strategy for both players in this version; predictions need best responses." },
-          toy: { r: ["T", "M", "B"], c: ["L", "C", "R"], cells: [[[9, 5], [5, 6], [1, 7]], [[1, 3], [2, 4], [3, 5]], [[2, 7], [3, 6], [2, 8]]], h: ["1-2"], msg: "Column player has a dominant strategy R; row player's best response to R is M." }
-        };
-        const g = games[s.game];
-        return { visualTitle: "Payoff Matrix", visualNote: "Highlighted cells show the prediction when the example has one.", visual: payoffMatrix("Payoffs", g.r, g.c, g.cells, g.h), stats: [makeStat(g.msg, "Interpretation")], intuition: g.msg, quiz: commonQuiz("Compare each strategy against every rival action", "Pick the largest payoff anywhere in the matrix", "Dominance is a row-by-row or column-by-column comparison against all rival choices.") };
-      }
-    };
-  }
-
-  function nashTool() {
-    return {
-      title: "Nash Equilibrium Finder",
-      subtitle: "A Nash equilibrium is a mutual best response.",
-      controls: [select("game", "Game", "prisoners", [["prisoners", "Prisoner's dilemma"], ["battle", "Coordination"], ["matching", "Matching pennies"]])],
-      render(s) {
-        const games = {
-          prisoners: { r: ["Cooperate", "Defect"], c: ["Cooperate", "Defect"], cells: [[[3, 3], [0, 5]], [[5, 0], [1, 1]]] },
-          battle: { r: ["A", "B"], c: ["A", "B"], cells: [[[4, 3], [0, 0]], [[0, 0], [3, 4]]] },
-          matching: { r: ["Heads", "Tails"], c: ["Heads", "Tails"], cells: [[[1, -1], [-1, 1]], [[-1, 1], [1, -1]]] }
-        };
-        const g = games[s.game];
-        const ne = bestResponses(g.cells);
-        return { visualTitle: "Best Responses", visualNote: "Highlighted cells are pure-strategy Nash equilibria.", visual: payoffMatrix("Payoffs", g.r, g.c, g.cells, ne), stats: [makeStat(ne.length ? ne.join(", ") : "None", "Pure Nash cells"), makeStat(ne.length, "Number of pure equilibria")], intuition: ne.length ? "At a highlighted cell, neither player wants to move unilaterally." : "No pure-strategy Nash equilibrium exists here; prediction requires mixed strategies.", quiz: commonQuiz("Mutual best responses", "The cell with the largest total payoff", "Nash equilibrium is about unilateral incentives, not just efficiency.") };
-      }
-    };
-  }
-
-  function coordinationTool() {
-    return {
-      title: "Coordination Games",
-      subtitle: "Some games have multiple equilibria, including good and bad conventions.",
-      controls: [range("safe", "Safe equilibrium payoff", 1, 8, 1, 4), range("risky", "High coordination payoff", 2, 12, 1, 8), range("mismatch", "Mismatch payoff", -5, 3, 1, 0)],
-      render(s) {
-        const cells = [[[s.risky, s.risky], [s.mismatch, s.mismatch]], [[s.mismatch, s.mismatch], [s.safe, s.safe]]];
-        const ne = bestResponses(cells);
-        const multiple = ne.length > 1;
-        const payoffDominant = multiple && ne.includes("0-0") && ne.includes("1-1") ? (s.risky >= s.safe ? "New/New" : "Old/Old") : "Not applicable";
-        const riskNote = multiple ? (s.mismatch < 0 ? "Mismatch is costly" : "Mismatch is mild") : "Single prediction";
-        return { visualTitle: "Computed Coordination Equilibria", visualNote: "Highlighted cells are true mutual best responses under the current payoffs.", visual: payoffMatrix("Coordination Payoffs", ["New standard", "Old standard"], ["New standard", "Old standard"], cells, ne), stats: [makeStat(ne.length ? ne.join(", ") : "None", "Nash cells"), makeStat(payoffDominant, "Payoff-dominant"), makeStat(riskNote, "Coordination risk"), makeStat(s.risky - s.safe, "New-standard payoff gap")], intuition: multiple ? "Coordination games are hard because more than one outcome can be self-reinforcing; expectations determine where players land." : "With these payoffs, the game no longer has two coordination equilibria, so the prediction should follow the actual best responses.", quiz: commonQuiz("Whether each player expects the other to coordinate", "Only which outcome has the highest payoff", "The problem is expectations and mutual best responses, not just preferences.") };
-      }
-    };
-  }
-
-  function sequentialTool() {
-    return {
-      title: "Sequential Games and Backward Induction",
-      subtitle: "Solve from the end of the tree backward.",
-      controls: [range("investGain", "Value if supplier invests", 20, 120, 5, 80), range("investCost", "Supplier investment cost", 0, 80, 5, 30), range("buyerOffer", "Buyer ex post offer", 0, 120, 5, 35)],
-      render(s) {
-        const supplierTradePayoff = s.buyerOffer - s.investCost;
-        const buyerTradePayoff = s.investGain - s.buyerOffer;
-        const supplierInvests = supplierTradePayoff >= 0;
-        const buyerPayoff = supplierInvests ? buyerTradePayoff : 0;
-        const supplierPayoff = supplierInvests ? supplierTradePayoff : 0;
-        const visual = chart(720, 360, html`
-          <line class="${supplierInvests ? "tree-link-active" : "tree-link"}" x1="120" y1="180" x2="310" y2="92"></line>
-          <line class="${supplierInvests ? "tree-link" : "tree-link-active"}" x1="120" y1="180" x2="310" y2="270"></line>
-          <line class="${supplierInvests ? "tree-link-active" : "tree-link"}" x1="310" y1="92" x2="560" y2="92"></line>
-          <rect class="game-node node-active" x="52" y="150" width="136" height="60" rx="6"></rect>
-          <text class="curve-label" x="120" y="176" text-anchor="middle">Supplier</text>
-          <text class="point-label" x="120" y="195" text-anchor="middle">Invest?</text>
-          <rect class="${supplierInvests ? "game-node node-active" : "game-node"}" x="242" y="62" width="136" height="60" rx="6"></rect>
-          <text class="curve-label" x="310" y="88" text-anchor="middle">Buyer offer</text>
-          <text class="point-label" x="310" y="107" text-anchor="middle">${fmt.money(s.buyerOffer)}</text>
-          <rect class="${supplierInvests ? "game-node node-active" : "game-node"}" x="500" y="62" width="160" height="60" rx="6"></rect>
-          <text class="curve-label" x="580" y="86" text-anchor="middle">Trade</text>
-          <text class="point-label" x="580" y="106" text-anchor="middle">B ${fmt.money(buyerTradePayoff)}, S ${fmt.money(supplierTradePayoff)}</text>
-          <rect class="${supplierInvests ? "game-node" : "game-node node-active"}" x="232" y="240" width="156" height="60" rx="6"></rect>
-          <text class="curve-label" x="310" y="266" text-anchor="middle">Do not invest</text>
-          <text class="point-label" x="310" y="286" text-anchor="middle">B $0, S $0</text>
-          <text class="point-label" x="194" y="116">Invest</text>
-          <text class="point-label" x="190" y="260">Do not invest</text>
-          <text class="axis-label" x="360" y="338" text-anchor="middle">Backward induction: supplier invests only if the later offer covers the sunk cost</text>
-        `);
-        return { visualTitle: "Backward-Induction Game Tree", visualNote: "The highlighted path is the prediction after solving from the terminal payoffs back to the first move.", visual, stats: [makeStat(supplierInvests ? "Invest and trade" : "Do not invest", "Backward-induction prediction"), makeStat(fmt.money(buyerPayoff), "Buyer payoff"), makeStat(fmt.money(supplierPayoff), "Supplier payoff"), makeStat(fmt.money(s.investCost), "Sunk investment cost")], intuition: "Backward induction asks what the later payoff will be, then uses that answer to predict the first mover's choice.", quiz: commonQuiz("Start at the final decision node", "Start with the biggest total surplus", "Sequential games are solved from future incentives back to current choices.") };
-      }
-    };
-  }
-
-  function priceCompetitionTool() {
-    return {
-      title: "Price Competition Games",
-      subtitle: "Each firm's best price depends on its rival's price.",
-      controls: [range("p1", "Firm 1 price", 10, 100, 5, 50), range("p2", "Firm 2 price", 10, 100, 5, 50), range("mc", "Marginal cost", 0, 60, 5, 20), range("diff", "Product differentiation", 0, 0.8, 0.1, 0.4)],
-      render(s) {
-        const q1 = Math.max(0, 100 - s.p1 + s.diff * s.p2);
-        const q2 = Math.max(0, 100 - s.p2 + s.diff * s.p1);
-        const pi1 = (s.p1 - s.mc) * q1;
-        const pi2 = (s.p2 - s.mc) * q2;
-        const br1 = (100 + s.diff * s.p2 + s.mc) / 2;
-        const br2 = (100 + s.diff * s.p1 + s.mc) / 2;
-        const nashPrice = (100 + s.mc) / (2 - s.diff);
-        const { xMax, yMax } = chartScales.priceGame;
-        const f = frame(720, 420, xMax, yMax, { xLabel: "Firm 1 price", yLabel: "Firm 2 price", xTicks: [0, 25, 50, 75, 100, 125], yTicks: [0, 25, 50, 75, 100, 125] });
-        const br1Path = Array.from({ length: 80 }, (_, i) => {
-          const p2 = yMax * i / 79;
-          const p1 = (100 + s.diff * p2 + s.mc) / 2;
-          return `${i === 0 ? "M" : "L"}${f.x(p1).toFixed(2)} ${f.y(p2).toFixed(2)}`;
-        }).join(" ");
-        const br2Path = sampledPath(0, xMax, 80, (p1) => (100 + s.diff * p1 + s.mc) / 2, f);
-        const visual = chart(720, 420, html`
-          ${f.axis}
-          <path class="demand-line no-fill" d="${br1Path}"></path>
-          <path class="supply-line no-fill" d="${br2Path}"></path>
-          <line class="guide-line" x1="${f.x(s.p1)}" y1="${f.y(s.p2)}" x2="${f.x(br1)}" y2="${f.y(s.p2)}"></line>
-          <line class="guide-line" x1="${f.x(s.p1)}" y1="${f.y(s.p2)}" x2="${f.x(s.p1)}" y2="${f.y(br2)}"></line>
-          <circle class="tax-point" cx="${f.x(s.p1)}" cy="${f.y(s.p2)}" r="5"></circle>
-          <circle class="eq-point" cx="${f.x(nashPrice)}" cy="${f.y(nashPrice)}" r="5"></circle>
-          <circle class="good-point" cx="${f.x(br1)}" cy="${f.y(s.p2)}" r="4"></circle>
-          <circle class="good-point" cx="${f.x(s.p1)}" cy="${f.y(br2)}" r="4"></circle>
-          <text class="curve-label" x="${f.x((100 + s.diff * 82 + s.mc) / 2)}" y="${f.y(82) - 8}">Firm 1 BR</text>
-          <text class="curve-label" x="${f.x(62)}" y="${f.y((100 + s.diff * 62 + s.mc) / 2) + 18}">Firm 2 BR</text>
-          <text class="point-label" x="${f.x(s.p1) + 8}" y="${f.y(s.p2) - 10}">Current prices</text>
-          <text class="point-label" x="${f.x(nashPrice) + 8}" y="${f.y(nashPrice) + 18}">Nash</text>
-        `);
-        return { visualTitle: "Best-Response Curves", visualNote: "A Nash price pair is where both firms sit on their best-response curves at the same time.", visual, stats: [makeStat(fmt.wholeMoney(pi1), "Firm 1 profit"), makeStat(fmt.wholeMoney(pi2), "Firm 2 profit"), makeStat(fmt.money(br1), "Firm 1 best response"), makeStat(fmt.money(br2), "Firm 2 best response"), makeStat(fmt.money(nashPrice), "Symmetric Nash price")], intuition: "A Nash price pair occurs when each firm's chosen price is its best response to the other's price. Moving toward either green point fixes one firm's incentive at a time.", quiz: commonQuiz("Compare each price with its best response", "Only compare market shares", "Price competition is strategic because your best price depends on your rival's price.") };
       }
     };
   }
